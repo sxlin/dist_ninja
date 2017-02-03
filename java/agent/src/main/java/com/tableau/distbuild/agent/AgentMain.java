@@ -29,6 +29,7 @@ public class AgentMain implements ServerCallbacks {
     public void serverDone(ServerExitState exitState) {
         System.out.println("Server stopped running");
         serverRunning = false;
+        serverExecutors.shutdownNow();
     }
 
     public static void main(String[] args) {

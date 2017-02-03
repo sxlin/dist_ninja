@@ -1,10 +1,11 @@
 package com.tableau.distbuild.agent;
 
-import com.tableau.distbuild.protobuf.DistBuildProtos.CommandResponse;
 import com.tableau.distbuild.protobuf.DistBuildProtos.CommandRequest;
+import com.tableau.distbuild.protobuf.DistBuildProtos.CommandResponse;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.List;
 
 public class NetworkCommand implements Command {
     private Socket clientSocket;
@@ -23,6 +24,11 @@ public class NetworkCommand implements Command {
     @Override
     public String getCommand() {
         return command.getCommand();
+    }
+
+    @Override
+    public List<String> getArgs() {
+        return command.getArgsList();
     }
 
     @Override
@@ -64,6 +70,6 @@ public class NetworkCommand implements Command {
             throw new IllegalStateException("Sending response before command is done");
         }
         responseBuilder.setId(command.getId());
-        responseBuilder.build().writeTo(clientSocket.getOutputStream());
+        responseBuilder.build().writeDelimitedTo(clientSocket.getOutputStream());
     }
 }

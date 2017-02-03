@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.LinkedList;
 
 public class LocalCommandDispatcher implements CommandDispatcher {
     private Command command;
@@ -18,10 +19,17 @@ public class LocalCommandDispatcher implements CommandDispatcher {
     public void run() {
         command.setState(CommandState.RUNNING);
         try {
+            System.out.println("Starting local command");
             Process p = runCommand();
             p.waitFor();
+            System.out.println("Local command finished");
             command.setState(CommandState.DONE);
             if (p.exitValue() == 0) {
+                BufferedReader stdin = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                String line;
+                while ((line = stdin.readLine()) != null) {
+                    System.out.println("Command output: " + line);
+                }
                 callbacks.commandSuccess(command);
             } else {
                 BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
@@ -45,11 +53,15 @@ public class LocalCommandDispatcher implements CommandDispatcher {
     }
 
     private Process runCommand() throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(command.getCommand());
+        LinkedList<String> pbargs = new LinkedList<>(command.getArgs());
+        pbargs.addFirst(command.getCommand());
+
+        ProcessBuilder builder = new ProcessBuilder(pbargs);
         String workingDir = command.getWorkingDirectory();
         if (workingDir != null) {
             builder.directory(new File(workingDir));
         }
         return builder.start();
+//        return Runtime.getRuntime().exec(command.getCommand());
     }
 }

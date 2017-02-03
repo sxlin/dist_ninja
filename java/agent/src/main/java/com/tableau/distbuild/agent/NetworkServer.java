@@ -45,6 +45,8 @@ public class NetworkServer implements CommandServer, CommandCallbacks {
         } catch (IOException e) {
             System.err.println("Error reading from server socket: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            commandExecutors.shutdownNow();
         }
         if (serverStopped) {
             callbacks.serverDone(ServerExitState.STOPPED);
@@ -81,9 +83,12 @@ public class NetworkServer implements CommandServer, CommandCallbacks {
     }
 
     private synchronized void startCommand(Socket clientSocket) throws IOException {
-        DistBuildProtos.CommandRequest clientCommand = DistBuildProtos.CommandRequest.parseFrom(clientSocket.getInputStream());
+        System.out.println("Connection accepted");
+        DistBuildProtos.CommandRequest clientCommand = DistBuildProtos.CommandRequest.parseDelimitedFrom(clientSocket.getInputStream());
+        System.out.println("Command request read");
         NetworkCommand command = new NetworkCommand(clientSocket, clientCommand);
 
+        System.out.println("Starting command");
         curRunning++;
         if (curRunning > maxRunning) {
             commandDone(command, DistBuildProtos.CommandResponse.Status.BUSY);
@@ -100,6 +105,7 @@ public class NetworkServer implements CommandServer, CommandCallbacks {
     }
 
     private synchronized void commandDone(Command command, DistBuildProtos.CommandResponse.Status status, String message) {
+        System.out.println("Command finished");
         curRunning--;
         try {
             command.setStatus(status);

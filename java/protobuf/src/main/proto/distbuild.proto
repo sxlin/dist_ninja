@@ -6,7 +6,8 @@ option java_outer_classname = "DistBuildProtos";
 message CommandRequest {
 	required string id = 1;
 	required string command = 2;
-	optional string working_dir = 3;
+    repeated string args = 3;
+	optional string working_dir = 4;
 }
 
 message CommandResponse {
