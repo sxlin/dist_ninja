@@ -163,7 +163,7 @@ struct Builder {
   /// It is an error to call this function when AlreadyUpToDate() is true.
   bool Build(string* err);
 
-  bool StartEdge(Edge* edge, string* err);
+  bool StartEdge(Edge* edge, CommandRunner *runner, string* err);
 
   /// Update status ninja logs following a command termination.
   /// @return false if the build can not proceed further due to a fatal error.
@@ -178,6 +178,7 @@ struct Builder {
   const BuildConfig& config_;
   Plan plan_;
   auto_ptr<CommandRunner> command_runner_;
+  auto_ptr<CommandRunner> peer_command_runner_;
   BuildStatus* status_;
 
  private:

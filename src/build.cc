@@ -31,6 +31,7 @@
 #include "deps_log.h"
 #include "disk_interface.h"
 #include "graph.h"
+#include "peer_command_runner.h"
 #include "state.h"
 #include "subprocess.h"
 #include "util.h"
@@ -604,6 +605,34 @@ void Builder::Cleanup() {
         disk_interface_->RemoveFile(depfile);
     }
   }
+
+  if (peer_command_runner_.get()) {
+    vector<Edge*> active_edges = peer_command_runner_->GetActiveEdges();
+    peer_command_runner_->Abort();
+
+    for (vector<Edge*>::iterator e = active_edges.begin();
+      e != active_edges.end(); ++e) {
+      string depfile = (*e)->GetUnescapedDepfile();
+      for (vector<Node*>::iterator o = (*e)->outputs_.begin();
+        o != (*e)->outputs_.end(); ++o) {
+        // Only delete this output if it was actually modified.  This is
+        // important for things like the generator where we don't want to
+        // delete the manifest file if we can avoid it.  But if the rule
+        // uses a depfile, always delete.  (Consider the case where we
+        // need to rebuild an output because of a modified header file
+        // mentioned in a depfile, and the command touches its depfile
+        // but is interrupted before it touches its output file.)
+        string err;
+        TimeStamp new_mtime = disk_interface_->Stat((*o)->path(), &err);
+        if (new_mtime == -1)  // Log and ignore Stat() errors.
+          Error("%s", err.c_str());
+        if (!depfile.empty() || (*o)->mtime() != new_mtime)
+          disk_interface_->RemoveFile((*o)->path());
+      }
+      if (!depfile.empty())
+        disk_interface_->RemoveFile(depfile);
+    }
+  }
 }
 
 Node* Builder::AddTarget(const string& name, string* err) {
@@ -650,6 +679,14 @@ bool Builder::Build(string* err) {
       command_runner_.reset(new RealCommandRunner(config_));
   }
 
+  // Set up the peer command runner if we haven't done so already.
+  if (!peer_command_runner_.get()) {
+    if (config_.dry_run)
+      peer_command_runner_.reset(new DryRunCommandRunner);
+    else
+      peer_command_runner_.reset(new PeerCommandRunner(config_));
+  }
+
   // We are about to start the build process.
   status_->BuildStarted();
 
@@ -662,7 +699,7 @@ bool Builder::Build(string* err) {
     // See if we can start any more commands.
     if (failures_allowed && command_runner_->CanRunMore()) {
       if (Edge* edge = plan_.FindWork()) {
-        if (!StartEdge(edge, err)) {
+        if (!StartEdge(edge, command_runner_.get(), err)) {
           Cleanup();
           status_->BuildFinished();
           return false;
@@ -679,11 +716,57 @@ bool Builder::Build(string* err) {
       }
     }
 
+    if (failures_allowed && peer_command_runner_->CanRunMore()) {
+      if (Edge* edge = plan_.FindWork()) {
+        if (!StartEdge(edge, peer_command_runner_.get(), err)) {
+          Cleanup();
+          status_->BuildFinished();
+          return false;
+        }
+
+        if (edge->is_phony()) {
+          plan_.EdgeFinished(edge, Plan::kEdgeSucceeded);
+        }
+        else {
+          ++pending_commands;
+        }
+
+        // We made some progress; go back to the main loop.
+        continue;
+      }
+    }
+
     // See if we can reap any finished commands.
     if (pending_commands) {
       CommandRunner::Result result;
       if (!command_runner_->WaitForCommand(&result) ||
           result.status == ExitInterrupted) {
+        Cleanup();
+        status_->BuildFinished();
+        *err = "interrupted by user";
+        return false;
+      }
+
+      --pending_commands;
+      if (!FinishCommand(&result, err)) {
+        Cleanup();
+        status_->BuildFinished();
+        return false;
+      }
+
+      if (!result.success()) {
+        if (failures_allowed)
+          failures_allowed--;
+      }
+
+      // We made some progress; start the main loop over.
+      continue;
+    }
+
+    if (pending_commands) {
+      CommandRunner::Result result;
+      if (!peer_command_runner_->WaitForCommand(&result) ||
+        result.status == ExitInterrupted) {
         Cleanup();
         status_->BuildFinished();
         *err = "interrupted by user";
@@ -725,7 +808,7 @@ bool Builder::Build(string* err) {
   return true;
 }
 
-bool Builder::StartEdge(Edge* edge, string* err) {
+bool Builder::StartEdge(Edge* edge, CommandRunner * runner, string* err) {
   METRIC_RECORD("StartEdge");
   if (edge->is_phony())
     return true;
@@ -750,7 +833,7 @@ bool Builder::StartEdge(Edge* edge, string* err) {
   }
 
   // start command computing and run it
-  if (!command_runner_->StartCommand(edge)) {
+  if (!runner->StartCommand(edge)) {
     err->assign("command '" + edge->EvaluateCommand() + "' failed.");
     return false;
   }
