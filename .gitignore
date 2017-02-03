@@ -43,3 +43,5 @@ TAGS
 
 # Protobuf generated code
 /java/protobuf/gen/
+vs/dist_ninja.v12.suo
+vs/Debug/ninja.Build.CppClean.log
