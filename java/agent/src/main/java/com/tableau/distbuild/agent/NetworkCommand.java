@@ -21,6 +21,19 @@ public class NetworkCommand implements Command {
     }
 
     @Override
+    public String getCommand() {
+        return command.getCommand();
+    }
+
+    @Override
+    public String getWorkingDirectory() {
+        if (command.hasWorkingDir()) {
+            return command.getWorkingDir();
+        }
+        return null;
+    }
+
+    @Override
     public CommandResponse.Status getStatus() {
         return responseBuilder.getStatus();
     }

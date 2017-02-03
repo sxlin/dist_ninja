@@ -5,6 +5,10 @@ import com.tableau.distbuild.protobuf.DistBuildProtos;
 import java.io.IOException;
 
 public interface Command {
+    String getCommand();
+
+    String getWorkingDirectory();
+
     DistBuildProtos.CommandResponse.Status getStatus();
 
     void setStatus(DistBuildProtos.CommandResponse.Status status);
