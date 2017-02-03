@@ -1,0 +1,16 @@
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'idea'
+
+    group 'com.tableau.distbuild'
+    version '1.0-SNAPSHOT'
+    sourceCompatibility = 1.8
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        testCompile 'junit:junit:4.12'
+    }
+}

@@ -1,0 +1,41 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    }
+}
+
+apply plugin: 'com.google.protobuf'
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.1.0'
+    }
+    generatedFilesBaseDir = "$projectDir/gen"
+
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                cpp {
+                    //outputSubDir = '../../../cpp-generated/'
+                }
+            }
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
+    }
+}
+
+dependencies {
+    compile group: 'com.google.protobuf', name: 'protobuf-java', version: '3.1.0'
+}
