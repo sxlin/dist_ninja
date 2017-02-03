@@ -31,3 +31,15 @@ TAGS
 # Ninja output
 .ninja_deps
 .ninja_log
+
+# Intellij Idea files
+**/.idea/
+
+# Java output
+/java/**/build/
+
+# Gradle output
+/java/**/.gradle/
+
+# Protobuf generated code
+/java/protobuf/gen/

@@ -1,0 +1,24 @@
+package distbuild;
+
+option java_package = "com.tableau.distbuild.protobuf";
+option java_outer_classname = "DistBuildProtos";
+
+message CommandRequest {
+	required string id = 1;
+	required string command = 2;
+    repeated string args = 3;
+	optional string working_dir = 4;
+}
+
+message CommandResponse {
+	required string id = 1;
+
+    enum Status {
+        SUCCESS = 0;
+        RETRYABLE = 1;
+        FATAL = 2;
+        BUSY = 3;
+    }
+	required Status status = 2;
+	optional string message = 3;
+}
