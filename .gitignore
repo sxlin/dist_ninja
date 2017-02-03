@@ -40,3 +40,6 @@ TAGS
 
 # Gradle output
 /java/**/.gradle/
+
+# Protobuf generated code
+/java/protobuf/gen/

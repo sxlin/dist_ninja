@@ -13,6 +13,17 @@ protobuf {
     protoc {
         artifact = 'com.google.protobuf:protoc:3.1.0'
     }
+    generatedFilesBaseDir = "$projectDir/gen"
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
+    }
 }
 
 dependencies {

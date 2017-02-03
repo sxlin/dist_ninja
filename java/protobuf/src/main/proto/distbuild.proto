@@ -3,14 +3,21 @@ package distbuild;
 option java_package = "com.tableau.distbuild.protobuf";
 option java_outer_classname = "DistBuildProtos";
 
-message RunCommand {
+message CommandRequest {
 	required string id = 1;
 	required string command = 2;
-	optional string workingDir = 3;
+	optional string working_dir = 3;
 }
 
 message CommandResponse {
 	required string id = 1;
-	required int32 status = 2;
+
+    enum Status {
+        SUCCESS = 0;
+        RETRYABLE = 1;
+        FATAL = 2;
+        BUSY = 3;
+    }
+	required Status status = 2;
 	optional string message = 3;
 }
